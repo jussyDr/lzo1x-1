@@ -1,0 +1,17 @@
+[package]
+name = "lzo1x"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.56"
+description = "Safe Rust port of the LZO1X compression algorithm"
+repository = "https://github.com/jussyDr/lzo1x"
+license = "GPL-2.0"
+keywords = ["lzo"]
+categories = ["compression"]
+
+[[bench]]
+name = "bench"
+harness = false
+
+[dev-dependencies]
+criterion = "0.4.0"
