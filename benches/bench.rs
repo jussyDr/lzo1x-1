@@ -1,15 +1,16 @@
-// Bench file is taken from the large corpus found in
+// Bench files are taken from the large corpus found in
 // the Canterbury corpus. https://corpus.canterbury.ac.nz/
 
+use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use std::fs;
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+fn bench_compress_and_decompress(c: &mut Criterion, file_name: &str) {
+    let mut g = c.benchmark_group(file_name);
 
-fn bench(c: &mut Criterion) {
-    let data = fs::read("benches/world192.txt").unwrap();
+    let data = fs::read(format!("benches/{file_name}")).unwrap();
     let mut output = vec![0; lzo1x::worst_compress(data.len())];
 
-    c.bench_function("compress", |b| {
+    g.bench_function("compress", |b| {
         b.iter(|| {
             black_box(lzo1x::compress_to_slice(&data, &mut output));
         })
@@ -18,11 +19,17 @@ fn bench(c: &mut Criterion) {
     let compressed_data = lzo1x::compress_to_slice(&data, &mut output);
     let mut output = vec![0; data.len()];
 
-    c.bench_function("decompress", |b| {
+    g.bench_function("decompress", |b| {
         b.iter(|| {
             black_box(lzo1x::decompress_to_slice(compressed_data, &mut output).ok());
         })
     });
+}
+
+fn bench(c: &mut Criterion) {
+    bench_compress_and_decompress(c, "bible.txt");
+    bench_compress_and_decompress(c, "E.coli");
+    bench_compress_and_decompress(c, "world192.txt");
 }
 
 criterion_group!(benches, bench);

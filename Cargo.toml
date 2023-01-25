@@ -13,5 +13,8 @@ categories = ["compression"]
 name = "bench"
 harness = false
 
+[profile.bench]
+debug = true
+
 [dev-dependencies]
 criterion = "0.4.0"
