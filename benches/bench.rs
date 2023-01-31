@@ -1,3 +1,6 @@
+// Bench files are taken from the large corpus found in
+// the Canterbury corpus. https://corpus.canterbury.ac.nz/
+
 use iai::black_box;
 
 fn bench_roundtrip(data: &[u8]) {
