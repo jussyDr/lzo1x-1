@@ -13,13 +13,8 @@ categories = ["compression"]
 name = "bench"
 harness = false
 
-[[bench]]
-name = "iai"
-harness = false
-
 [profile.bench]
 debug = true
 
 [dev-dependencies]
-criterion = "0.4.0"
 iai = "0.1.1"
