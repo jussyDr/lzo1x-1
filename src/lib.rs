@@ -417,8 +417,6 @@ pub fn decompress_to_slice<'a>(input: &[u8], output: &'a mut [u8]) -> Result<&'a
         ip += t;
     }
 
-    let mut current_block;
-
     loop {
         t = input[ip] as usize;
         ip += 1;
@@ -457,11 +455,9 @@ pub fn decompress_to_slice<'a>(input: &[u8], output: &'a mut [u8]) -> Result<&'a
                     return Err(Error::InputOverrun);
                 }
 
-                for _ in 0..t {
-                    output[op] = input[ip];
-                    op += 1;
-                    ip += 1;
-                }
+                output[op..op + t].copy_from_slice(&input[ip..ip + t]);
+                op += t;
+                ip += t;
 
                 state = 4;
 
@@ -485,15 +481,27 @@ pub fn decompress_to_slice<'a>(input: &[u8], output: &'a mut [u8]) -> Result<&'a
                 output[op] = output[m_pos];
                 output[op + 1] = output[m_pos + 1];
                 op += 2;
-                current_block = 44;
             } else {
                 next = t & 3;
                 m_pos = op - (1 + 0x800);
                 m_pos -= t >> 2;
                 m_pos -= (input[ip] as usize) << 2;
                 ip += 1;
-                t = 3;
-                current_block = 36;
+
+                // if m_pos < 0 {
+                //     current_block = 48;
+                //     break;
+                // }
+
+                if output.len() - op < t {
+                    return Err(Error::Error);
+                }
+
+                for _ in 0..t {
+                    output[op] = output[m_pos];
+                    m_pos += 1;
+                    op += 1;
+                }
             }
         } else {
             if t >= 64 {
@@ -592,10 +600,6 @@ pub fn decompress_to_slice<'a>(input: &[u8], output: &'a mut [u8]) -> Result<&'a
                 m_pos -= 0x4000;
             }
 
-            current_block = 36;
-        }
-
-        if current_block == 36 {
             // if m_pos < 0 {
             //     current_block = 48;
             //     break;
