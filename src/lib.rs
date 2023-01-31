@@ -1,7 +1,6 @@
 //! Safe Rust port of the LZO1X compression algorithm.
 
 use core::fmt::{self, Debug, Display};
-use core::mem::size_of;
 
 /// Computes the worst case compressed size for the given input `size`.
 pub fn worst_compress(size: usize) -> usize {
@@ -34,13 +33,8 @@ impl std::error::Error for Error {}
 /// Decompression result type.
 pub type Result<T> = std::result::Result<T, Error>;
 
-const LZO1X_MEM_COMPRESS: usize = 8192 * 16;
-
 /// Compress the given `input` to the `output` slice, returning a slice containing the compressed data.
 pub fn compress_to_slice<'a>(input: &[u8], output: &'a mut [u8]) -> &'a mut [u8] {
-    let mut wrkmem = vec![0u16; LZO1X_MEM_COMPRESS / size_of::<u16>()];
-
-    let mut current_block;
     let mut ip = 0;
     let mut op = 0;
     let mut l = input.len();
@@ -59,7 +53,7 @@ pub fn compress_to_slice<'a>(input: &[u8], output: &'a mut [u8]) -> &'a mut [u8]
         //     break;
         // }
 
-        wrkmem[..1 << 13].fill(0);
+        let mut wrkmem = [0; 1 << 13];
 
         t = {
             let in_ = ip;
@@ -304,7 +298,7 @@ pub fn compress_to_slice<'a>(input: &[u8], output: &'a mut [u8]) -> &'a mut [u8]
     t += l;
 
     if t > 0 {
-        let mut ii = input.len() - t;
+        let ii = input.len() - t;
 
         if op == 0 && t <= 238 {
             output[op] = t as u8 + 17;
@@ -332,43 +326,9 @@ pub fn compress_to_slice<'a>(input: &[u8], output: &'a mut [u8]) -> &'a mut [u8]
             output[op] = tt as u8;
             op += 1;
         }
-        if t >= 16 {
-            current_block = 16;
-        } else {
-            current_block = 18;
-        }
 
-        loop {
-            if current_block == 16 {
-                for _ in 0..16 {
-                    output[op] = input[ii];
-                    op += 1;
-                    ii += 1;
-                }
-
-                t -= 16;
-
-                if t >= 16 {
-                    current_block = 16;
-                } else {
-                    current_block = 18;
-                }
-            } else if t > 0 {
-                current_block = 19;
-                break;
-            } else {
-                current_block = 21;
-                break;
-            }
-        }
-        if current_block == 21 {
-        } else {
-            for _ in 0..t {
-                output[op] = input[ii];
-                op += 1;
-                ii += 1;
-            }
-        }
+        output[op..op + t].copy_from_slice(&input[ii..ii + t]);
+        op += t;
     }
 
     output[op] = 16 | 1;

@@ -1,25 +1,29 @@
 use iai::black_box;
 
-fn roundtrip(data: &[u8]) {
+fn bench_roundtrip(data: &[u8]) {
     let mut output = vec![0; lzo1x::worst_compress(data.len())];
     let compressed_data = lzo1x::compress_to_slice(data, &mut output);
     let mut output = vec![0; data.len()];
     lzo1x::decompress_to_slice(compressed_data, &mut output).unwrap();
 }
 
-fn bible() {
+fn bench_roundtrip_bible() {
     let data = black_box(include_bytes!("bible.txt"));
-    roundtrip(data);
+    bench_roundtrip(data);
 }
 
-fn ecoli() {
+fn bench_roundtrip_ecoli() {
     let data = black_box(include_bytes!("E.coli"));
-    roundtrip(data);
+    bench_roundtrip(data);
 }
 
-fn world() {
+fn bench_roundtrip_world() {
     let data = black_box(include_bytes!("world192.txt"));
-    roundtrip(data);
+    bench_roundtrip(data);
 }
 
-iai::main!(bible, ecoli, world);
+iai::main!(
+    bench_roundtrip_bible,
+    bench_roundtrip_ecoli,
+    bench_roundtrip_world
+);
