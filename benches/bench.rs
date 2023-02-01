@@ -28,5 +28,5 @@ fn bench_roundtrip_world() {
 iai::main!(
     bench_roundtrip_bible,
     bench_roundtrip_ecoli,
-    bench_roundtrip_world
+    bench_roundtrip_world,
 );

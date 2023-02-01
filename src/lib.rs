@@ -569,10 +569,24 @@ pub fn decompress_to_slice<'a>(input: &[u8], output: &'a mut [u8]) -> Result<&'a
                 return Err(Error::Error);
             }
 
-            for _ in 0..t {
-                output[op] = output[m_pos];
-                m_pos += 1;
-                op += 1;
+            let offset = op - m_pos;
+
+            if offset < 8 {
+                for _ in 0..t {
+                    output[op] = output[m_pos];
+                    op += 1;
+                    m_pos += 1;
+                }
+            } else {
+                let mut count = 0;
+
+                while count + offset < t {
+                    output.copy_within(m_pos + count..m_pos + count + offset, op + count);
+                    count += offset;
+                }
+
+                output.copy_within(m_pos + count..m_pos + t, op + count);
+                op += t;
             }
         }
 
