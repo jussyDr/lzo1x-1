@@ -18,3 +18,10 @@ debug = true
 
 [dev-dependencies]
 iai = "0.1.1"
+
+[features]
+std = []
+default = ["std"]
+
+[package.metadata.docs.rs]
+features = ["std"]

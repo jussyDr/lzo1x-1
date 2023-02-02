@@ -1,5 +1,10 @@
 //! Safe Rust port of the LZO1X compression algorithm.
 
+#![no_std]
+
+#[cfg(feature = "std")]
+extern crate std;
+
 use core::fmt::{self, Debug, Display};
 
 /// Computes the worst case compressed size for the given input `size`.
@@ -28,10 +33,11 @@ impl Display for Error {
     }
 }
 
+#[cfg(feature = "std")]
 impl std::error::Error for Error {}
 
 /// Decompression result type.
-pub type Result<T> = std::result::Result<T, Error>;
+pub type Result<T> = core::result::Result<T, Error>;
 
 /// Compress the given `input` to the `output` slice, returning a slice containing the compressed data.
 pub fn compress_to_slice<'a>(input: &[u8], output: &'a mut [u8]) -> &'a mut [u8] {
