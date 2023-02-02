@@ -1,0 +1,49 @@
+name: Rust
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - toolchain: 1.56.0
+            features: 
+          - toolchain: stable 
+            features:
+          - toolchain: stable 
+            features: std
+    steps:
+    - uses: actions/checkout@v3
+    - uses: dtolnay/rust-toolchain@master
+      with:
+        toolchain: ${{ matrix.toolchain }}
+    - name: Build
+      run: cargo build --verbose --features "${{ matrix.features }}"
+    - name: Run tests
+      run: cargo test --verbose --features "${{ matrix.features }}"   
+  build_no_std:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - toolchain: 1.56.0
+            target: thumbv6m-none-eabi
+          - toolchain: stable
+            target: thumbv6m-none-eabi
+    steps:
+      - uses: actions/checkout@v3
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ matrix.toolchain }}
+          target: ${{ matrix.target }}
+      - name: Build
+        run: cargo build --verbose --target=${{ matrix.target }} --no-default-features
