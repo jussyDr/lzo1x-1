@@ -5,8 +5,6 @@
 #[cfg(feature = "std")]
 extern crate std;
 
-mod compress;
-
 use core::fmt::{self, Debug, Display};
 
 /// Computes the worst case compressed size for the given input `size`.
@@ -43,20 +41,374 @@ pub type Result<T> = core::result::Result<T, Error>;
 
 /// Compress the given `input` to the `output` slice, returning a slice containing the compressed data.
 pub fn compress_to_slice<'a>(input: &[u8], output: &'a mut [u8]) -> &'a mut [u8] {
-    unsafe {
-        let mut out_len: usize = 0;
-        let mut wrkmem = [0u8; 8192 * 16];
+    let mut wrkmem = [0u16; u16::MAX as usize];
 
-        compress::lzo1x_1_compress(
-            input.as_ptr(),
-            input.len(),
-            output.as_mut_ptr(),
-            (&mut out_len) as *mut _,
-            wrkmem.as_mut_ptr().cast(),
-        );
+    let mut op = 0;
+    let mut current_block;
+    let mut ip = 0;
+    let mut l = input.len();
+    let mut t = 0;
 
-        core::slice::from_raw_parts_mut(output.as_mut_ptr(), out_len)
+    loop {
+        if l <= 20 {
+            break;
+        }
+
+        let ll = if l <= 0xbfff + 1 { l } else { 0xbfff + 1 };
+        let ll_end = ip + ll;
+
+        if ll_end + ((t + ll) >> 5) <= ll_end {
+            break;
+        }
+
+        wrkmem[..8192].fill(0);
+
+        t = {
+            let in_ = ip;
+            let in_len = ll;
+            let mut ti = t;
+
+            let mut current_block;
+            let mut ip = in_;
+            let in_end = in_ + in_len;
+            let ip_end = in_ + in_len - 20;
+            let mut ii = in_;
+
+            ip += if ti < 4 { 4 - ti } else { 0 };
+
+            let mut m_off: usize;
+
+            'loop2: loop {
+                ip += ((ip - ii) >> 5) + 1;
+
+                loop {
+                    if ip >= ip_end {
+                        break 'loop2;
+                    }
+
+                    let dv = u32::from_le_bytes(input[ip..ip + 4].try_into().unwrap());
+                    let mut t =
+                        (dv.wrapping_mul(0x1824429D) >> (32 - 13) & ((1 << 13) - 1)) as usize;
+                    let m_pos = in_ + wrkmem[t] as usize;
+                    wrkmem[t] = (ip - in_) as u16;
+
+                    if dv != u32::from_le_bytes(input[m_pos..m_pos + 4].try_into().unwrap()) {
+                        break;
+                    }
+
+                    ii -= ti;
+                    ti = 0;
+                    t = ip - ii;
+
+                    if t != 0 {
+                        if t <= 3 {
+                            output[op - 2] |= t as u8;
+                            output[op] = input[ii];
+                            output[op + 1] = input[ii + 1];
+                            output[op + 2] = input[ii + 2];
+                            output[op + 3] = input[ii + 3];
+                            op += t;
+                        } else if t <= 16 {
+                            output[op] = t as u8 - 3;
+                            op += 1;
+                            output[op..op + 16].copy_from_slice(&input[ii..ii + 16]);
+                            op += t;
+                        } else {
+                            if t <= 18 {
+                                output[op] = t as u8 - 3;
+                                op += 1;
+                            } else {
+                                let mut tt = t - 18;
+                                output[op] = 0;
+                                op += 1;
+
+                                loop {
+                                    if tt <= 255 {
+                                        break;
+                                    }
+
+                                    tt -= 255;
+                                    output[op] = 0;
+                                    op += 1;
+                                }
+
+                                output[op] = tt as u8;
+                                op += 1;
+                            }
+
+                            loop {
+                                output[op..op + 16].copy_from_slice(&input[ii..ii + 16]);
+                                op += 16;
+                                ii += 16;
+                                t -= 16;
+
+                                if t < 16 {
+                                    break;
+                                }
+                            }
+
+                            if t > 0 {
+                                loop {
+                                    output[op] = input[ii];
+                                    op += 1;
+                                    ii += 1;
+                                    t -= 1;
+
+                                    if t == 0 {
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    let mut m_len = 4;
+
+                    if input[ip + m_len] as i32 == input[m_pos + m_len] as i32 {
+                        current_block = 22;
+                    } else {
+                        current_block = 31;
+                    }
+
+                    loop {
+                        if current_block == 22 {
+                            m_len += 1;
+
+                            if input[ip + m_len] as i32 != input[m_pos + m_len] as i32 {
+                                current_block = 31;
+                                continue;
+                            }
+
+                            m_len += 1;
+
+                            if input[ip + m_len] as i32 != input[m_pos + m_len] as i32 {
+                                current_block = 31;
+                                continue;
+                            }
+
+                            m_len += 1;
+
+                            if input[ip + m_len] as i32 != input[m_pos + m_len] as i32 {
+                                current_block = 31;
+                                continue;
+                            }
+
+                            m_len += 1;
+
+                            if input[ip + m_len] as i32 != input[m_pos + m_len] as i32 {
+                                current_block = 31;
+                                continue;
+                            }
+
+                            m_len += 1;
+
+                            if input[ip + m_len] as i32 != input[m_pos + m_len] as i32 {
+                                current_block = 31;
+                                continue;
+                            }
+
+                            m_len += 1;
+
+                            if input[ip + m_len] as i32 != input[m_pos + m_len] as i32 {
+                                current_block = 31;
+                                continue;
+                            }
+
+                            m_len += 1;
+
+                            if input[ip + m_len] as i32 != input[m_pos + m_len] as i32 {
+                                current_block = 31;
+                                continue;
+                            }
+
+                            m_len += 1;
+
+                            if ip + m_len >= ip_end {
+                                current_block = 31;
+                                continue;
+                            }
+
+                            if input[ip + m_len] as i32 == input[m_pos + m_len] as i32 {
+                                current_block = 22;
+                            } else {
+                                current_block = 31;
+                            }
+                        } else {
+                            m_off = ip - m_pos;
+                            ip += m_len;
+                            ii = ip;
+
+                            if m_len <= 8 && m_off <= 0x800 {
+                                current_block = 47;
+                                break;
+                            } else {
+                                current_block = 32;
+                                break;
+                            }
+                        }
+                    }
+                    if current_block == 32 {
+                        if m_off <= 0x4000 {
+                            m_off -= 1;
+
+                            if m_len <= 33 {
+                                output[op] = (32 | (m_len - 2)) as u8;
+                                op += 1;
+                            } else {
+                                m_len -= 33;
+                                output[op] = 32;
+                                op += 1;
+
+                                loop {
+                                    if m_len <= 255 {
+                                        break;
+                                    }
+
+                                    m_len -= 255;
+                                    output[op] = 0;
+                                    op += 1;
+                                }
+
+                                output[op] = m_len as u8;
+                                op += 1;
+                            }
+
+                            output[op] = (m_off << 2) as u8;
+                            op += 1;
+                            output[op] = (m_off >> 6) as u8;
+                            op += 1;
+                        } else {
+                            m_off -= 0x4000;
+
+                            if m_len <= 9 {
+                                output[op] = (16 | m_off >> 11 & 8 | (m_len - 2)) as u8;
+                                op += 1;
+                            } else {
+                                m_len -= 9;
+                                output[op] = (16 | m_off >> 11 & 8) as u8;
+                                op += 1;
+
+                                loop {
+                                    if m_len <= 255 {
+                                        break;
+                                    }
+
+                                    m_len -= 255;
+                                    output[op] = 0;
+                                    op += 1;
+                                }
+
+                                output[op] = m_len as u8;
+                                op += 1;
+                            }
+
+                            output[op] = (m_off << 2) as u8;
+                            op += 1;
+                            output[op] = (m_off >> 6) as u8;
+                            op += 1;
+                        }
+                    } else {
+                        m_off -= 1;
+                        output[op] = ((m_len - 1) << 5 | (m_off & 7) << 2) as u8;
+                        op += 1;
+                        output[op] = (m_off >> 3) as u8;
+                        op += 1;
+                    }
+                }
+            }
+
+            in_end - (ii - ti)
+        };
+
+        ip += ll;
+        l -= ll;
     }
+
+    t += l;
+
+    if t > 0 {
+        let mut ii = input.len() - t;
+
+        if op == 0 && t <= 238 {
+            output[op] = t as u8 + 17;
+            op += 1;
+        } else if t <= 3 {
+            output[op - 2] |= t as u8;
+        } else if t <= 18 {
+            output[op] = t as u8 - 3;
+            op += 1;
+        } else {
+            let mut tt = t - 18;
+
+            output[op] = 0;
+            op += 1;
+
+            loop {
+                if tt <= 255 {
+                    break;
+                }
+
+                tt -= 255;
+                output[op] = 0;
+                op += 1;
+            }
+
+            output[op] = tt as u8;
+            op += 1;
+        }
+
+        if t >= 16 {
+            current_block = 16;
+        } else {
+            current_block = 18;
+        }
+
+        loop {
+            if current_block == 16 {
+                for _ in 0..16 {
+                    output[op] = input[ii];
+                    op += 1;
+                    ii += 1;
+                }
+
+                t -= 16;
+
+                if t >= 16 {
+                    current_block = 16;
+                } else {
+                    current_block = 18;
+                }
+            } else if t > 0 {
+                current_block = 19;
+                break;
+            } else {
+                current_block = 21;
+                break;
+            }
+        }
+
+        if current_block == 21 {
+        } else {
+            loop {
+                output[op] = input[ii];
+                op += 1;
+                ii += 1;
+                t -= 1;
+
+                if t == 0 {
+                    break;
+                }
+            }
+        }
+    }
+
+    output[op] = 17;
+    op += 1;
+    output[op] = 0;
+    op += 1;
+    output[op] = 0;
+    op += 1;
+    &mut output[..op]
 }
 
 /// Decompress the given `input` to the `output` slice, returning a slice containing the decompressed data.
