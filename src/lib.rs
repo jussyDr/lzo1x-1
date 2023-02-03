@@ -44,7 +44,6 @@ pub fn compress_to_slice<'a>(input: &[u8], output: &'a mut [u8]) -> &'a mut [u8]
     let mut wrkmem = [0u16; u16::MAX as usize];
 
     let mut op = 0;
-    let mut current_block;
     let mut ip = 0;
     let mut l = input.len();
     let mut t = 0;
@@ -136,89 +135,28 @@ pub fn compress_to_slice<'a>(input: &[u8], output: &'a mut [u8]) -> &'a mut [u8]
                                 op += 1;
                             }
 
-                            loop {
-                                output[op..op + 16].copy_from_slice(&input[ii..ii + 16]);
-                                op += 16;
-                                ii += 16;
-                                t -= 16;
-
-                                if t < 16 {
-                                    break;
-                                }
-                            }
-
-                            if t > 0 {
-                                loop {
-                                    output[op] = input[ii];
-                                    op += 1;
-                                    ii += 1;
-                                    t -= 1;
-
-                                    if t == 0 {
-                                        break;
-                                    }
-                                }
-                            }
+                            output[op..op + t].copy_from_slice(&input[ii..ii + t]);
+                            op += t;
                         }
                     }
 
                     let mut m_len = 4;
 
-                    if input[ip + m_len] as i32 == input[m_pos + m_len] as i32 {
+                    if input[ip + m_len] == input[m_pos + m_len] {
                         current_block = 22;
                     } else {
                         current_block = 31;
                     }
 
-                    loop {
+                    'loop1: loop {
                         if current_block == 22 {
-                            m_len += 1;
+                            for _ in 0..7 {
+                                m_len += 1;
 
-                            if input[ip + m_len] as i32 != input[m_pos + m_len] as i32 {
-                                current_block = 31;
-                                continue;
-                            }
-
-                            m_len += 1;
-
-                            if input[ip + m_len] as i32 != input[m_pos + m_len] as i32 {
-                                current_block = 31;
-                                continue;
-                            }
-
-                            m_len += 1;
-
-                            if input[ip + m_len] as i32 != input[m_pos + m_len] as i32 {
-                                current_block = 31;
-                                continue;
-                            }
-
-                            m_len += 1;
-
-                            if input[ip + m_len] as i32 != input[m_pos + m_len] as i32 {
-                                current_block = 31;
-                                continue;
-                            }
-
-                            m_len += 1;
-
-                            if input[ip + m_len] as i32 != input[m_pos + m_len] as i32 {
-                                current_block = 31;
-                                continue;
-                            }
-
-                            m_len += 1;
-
-                            if input[ip + m_len] as i32 != input[m_pos + m_len] as i32 {
-                                current_block = 31;
-                                continue;
-                            }
-
-                            m_len += 1;
-
-                            if input[ip + m_len] as i32 != input[m_pos + m_len] as i32 {
-                                current_block = 31;
-                                continue;
+                                if input[ip + m_len] != input[m_pos + m_len] {
+                                    current_block = 31;
+                                    continue 'loop1;
+                                }
                             }
 
                             m_len += 1;
@@ -327,7 +265,7 @@ pub fn compress_to_slice<'a>(input: &[u8], output: &'a mut [u8]) -> &'a mut [u8]
     t += l;
 
     if t > 0 {
-        let mut ii = input.len() - t;
+        let ii = input.len() - t;
 
         if op == 0 && t <= 238 {
             output[op] = t as u8 + 17;
@@ -357,49 +295,8 @@ pub fn compress_to_slice<'a>(input: &[u8], output: &'a mut [u8]) -> &'a mut [u8]
             op += 1;
         }
 
-        if t >= 16 {
-            current_block = 16;
-        } else {
-            current_block = 18;
-        }
-
-        loop {
-            if current_block == 16 {
-                for _ in 0..16 {
-                    output[op] = input[ii];
-                    op += 1;
-                    ii += 1;
-                }
-
-                t -= 16;
-
-                if t >= 16 {
-                    current_block = 16;
-                } else {
-                    current_block = 18;
-                }
-            } else if t > 0 {
-                current_block = 19;
-                break;
-            } else {
-                current_block = 21;
-                break;
-            }
-        }
-
-        if current_block == 21 {
-        } else {
-            loop {
-                output[op] = input[ii];
-                op += 1;
-                ii += 1;
-                t -= 1;
-
-                if t == 0 {
-                    break;
-                }
-            }
-        }
+        output[op..op + t].copy_from_slice(&input[ii..ii + t]);
+        op += t;
     }
 
     output[op] = 17;
@@ -408,6 +305,7 @@ pub fn compress_to_slice<'a>(input: &[u8], output: &'a mut [u8]) -> &'a mut [u8]
     op += 1;
     output[op] = 0;
     op += 1;
+
     &mut output[..op]
 }
 
