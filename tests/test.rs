@@ -25,12 +25,12 @@ fn roundtrip_a() {
 
 #[test]
 fn roundtrip_aaa() {
-    test_roundtrip("aaa.txt", 51269);
+    test_roundtrip("aaa.txt", 471);
 }
 
 #[test]
 fn roundtrip_alphabet() {
-    test_roundtrip("alphabet.txt", 51294);
+    test_roundtrip("alphabet.txt", 544);
 }
 
 #[test]
