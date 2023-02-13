@@ -4,10 +4,10 @@
 use iai::black_box;
 
 fn bench_roundtrip(data: &[u8]) {
-    let mut output = vec![0; lzo1x::worst_compress(data.len())];
-    let compressed_data = lzo1x::compress_to_slice(data, &mut output);
+    let mut output = vec![0; lzo1x_1::worst_compress(data.len())];
+    let compressed_data = lzo1x_1::compress_to_slice(data, &mut output);
     let mut output = vec![0; data.len()];
-    lzo1x::decompress_to_slice(compressed_data, &mut output).unwrap();
+    lzo1x_1::decompress_to_slice(compressed_data, &mut output).unwrap();
 }
 
 fn bench_roundtrip_bible() {

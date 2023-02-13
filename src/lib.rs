@@ -1,4 +1,4 @@
-//! Safe Rust port of the LZO1X compression algorithm.
+//! Safe Rust port of the LZO1X-1 compression algorithm.
 
 #![no_std]
 
