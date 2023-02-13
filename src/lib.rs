@@ -16,14 +16,12 @@ pub fn worst_compress(size: usize) -> usize {
 #[derive(Debug)]
 pub enum Error {
     /// Input does not have the correct format.
-    Error,
-    /// Expected more input.
+    Format,
+    /// Reached end of input buffer but expected more input.
     InputOverrun,
-    /// Output was not large enough.
+    /// Output buffer was not large enough.
     OutputOverrun,
-    /// Input bad format.
-    LookbehindOverrun,
-    /// Input bad format.
+    /// Input buffer was not entirely consumed.
     InputNotConsumed,
 }
 
@@ -435,7 +433,7 @@ pub fn decompress_to_slice<'a>(input: &[u8], output: &'a mut [u8]) -> Result<&'a
         }
 
         if output.len() - op < t {
-            return Err(Error::Error);
+            return Err(Error::OutputOverrun);
         }
 
         if input.len() - ip < t + 3 {
@@ -467,7 +465,7 @@ pub fn decompress_to_slice<'a>(input: &[u8], output: &'a mut [u8]) -> Result<&'a
                     let mut offset = ip - ip_last;
 
                     if offset > usize::MAX / 255 - 2 {
-                        return Err(Error::Error);
+                        return Err(Error::Format);
                     }
 
                     offset = (offset << 8) - offset;
@@ -478,7 +476,7 @@ pub fn decompress_to_slice<'a>(input: &[u8], output: &'a mut [u8]) -> Result<&'a
                 t += 3;
 
                 if output.len() - op < t {
-                    return Err(Error::Error);
+                    return Err(Error::OutputOverrun);
                 }
 
                 if input.len() - ip < t + 3 {
@@ -505,7 +503,7 @@ pub fn decompress_to_slice<'a>(input: &[u8], output: &'a mut [u8]) -> Result<&'a
                 // }
 
                 if output.len() - op < 2 {
-                    return Err(Error::Error);
+                    return Err(Error::OutputOverrun);
                 }
 
                 output[op] = output[m_pos];
@@ -524,7 +522,7 @@ pub fn decompress_to_slice<'a>(input: &[u8], output: &'a mut [u8]) -> Result<&'a
                 // }
 
                 if output.len() - op < t {
-                    return Err(Error::Error);
+                    return Err(Error::OutputOverrun);
                 }
 
                 for _ in 0..t {
@@ -558,7 +556,7 @@ pub fn decompress_to_slice<'a>(input: &[u8], output: &'a mut [u8]) -> Result<&'a
                     let mut offset = ip - ip_last;
 
                     if offset > usize::MAX / 255 - 2 {
-                        return Err(Error::Error);
+                        return Err(Error::Format);
                     }
 
                     offset = (offset << 8) - offset;
@@ -594,7 +592,7 @@ pub fn decompress_to_slice<'a>(input: &[u8], output: &'a mut [u8]) -> Result<&'a
                     let mut offset = ip - ip_last;
 
                     if offset > usize::MAX / 255 - 2 {
-                        return Err(Error::Error);
+                        return Err(Error::Format);
                     }
 
                     offset = (offset << 8) - offset;
@@ -613,7 +611,7 @@ pub fn decompress_to_slice<'a>(input: &[u8], output: &'a mut [u8]) -> Result<&'a
 
                 if m_pos == op {
                     if t != 3 {
-                        return Err(Error::Error);
+                        return Err(Error::Format);
                     }
 
                     if ip == input.len() {
@@ -636,7 +634,7 @@ pub fn decompress_to_slice<'a>(input: &[u8], output: &'a mut [u8]) -> Result<&'a
             // }
 
             if output.len() - op < t {
-                return Err(Error::Error);
+                return Err(Error::OutputOverrun);
             }
 
             let offset = op - m_pos;
@@ -667,7 +665,7 @@ pub fn decompress_to_slice<'a>(input: &[u8], output: &'a mut [u8]) -> Result<&'a
         }
 
         if output.len() - op < next {
-            return Err(Error::Error);
+            return Err(Error::OutputOverrun);
         }
 
         for _ in 0..next {
